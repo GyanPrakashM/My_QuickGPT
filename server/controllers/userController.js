@@ -1,16 +1,15 @@
 import User from "../models/User.js"
+import Chat from "../models/Chat.js"
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 
 
-// Generate JWT
 const generateToken = (id) => {
     return jwt.sign({id}, process.env.JWT_SECRET , {
         expiresIn: "30d"
     })
 }
 
-// API to register user
 export const registerUser = async(req , res) => {
     const {name , email , password} = req.body;
 
@@ -32,7 +31,6 @@ export const registerUser = async(req , res) => {
     }
 }
 
-// API to login user 
 export const loginUser = async (req , res) => {
     const {email , password} = req.body;
 
@@ -52,7 +50,6 @@ export const loginUser = async (req , res) => {
     }
 } 
 
-// API  to get user data
 export const getUser = async(req, res) =>{
     try{
         const user = req.user;
@@ -62,7 +59,6 @@ export const getUser = async(req, res) =>{
     }
 }
 
-// APi to get published images
 export const getPublishedImages = async (req, res) => {
     try{
         const publishedImageMessages = await Chat.aggregate([

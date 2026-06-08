@@ -1,8 +1,6 @@
-import React from 'react';
 import { useState } from 'react';
-import { useEffect } from 'react';
-import Loading from './Loading';
- 
+import { useAppContext } from '../context/AppContext';
+import toast from 'react-hot-toast';
 
 
 const Login = () =>{
@@ -11,9 +9,23 @@ const Login = () =>{
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const {axios , setToken} = useAppContext()
+
 
     const handleSubmit = async (e) => {
       e.preventDefault();
+      const url = state === "login" ? "/api/user/login" : "/api/user/register";
+      try{
+        const {data} = await axios.post(url , {name , email, password})
+        if(data.success){
+            setToken(data.token);
+            localStorage.setItem('token', data.token);
+        }else{
+            toast.error(data.message);
+        }
+      }catch(error){
+            toast.error(error.message);     
+      }
     }
 
 

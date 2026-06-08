@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Sidebar from './components/Sidebar';
 import {Route , Routes , useLocation} from 'react-router-dom';
@@ -23,7 +24,7 @@ const App = () =>{
   const [isMenuOpen , setIsMenuOpen] = useState(false)
   const {pathname} = useLocation()
 
-  if(pathname === '/loading') return <Loading />
+  if(pathname === '/loading') return <Loading verifyPayment />
 
   return(
     <>

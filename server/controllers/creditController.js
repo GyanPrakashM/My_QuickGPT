@@ -1,4 +1,5 @@
 import Transaction  from "../models/Transaction.js";
+import User from "../models/User.js";
 import Stripe from 'stripe'
 
 const plans = [
@@ -25,7 +26,6 @@ const plans = [
     }
 ];
 
-// APi controller for getting all plans
 export const getPlans = async(req , res) =>{
     try{
         res.json({success: true, plans})
@@ -36,7 +36,46 @@ export const getPlans = async(req , res) =>{
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-// Api controller for purchasing a plan 
+export const applyPaidTransactionCredits = async (transactionId) => {
+    if (!transactionId) {
+        return { success: false, message: "Missing transaction" };
+    }
+
+    const transaction = await Transaction.findById(transactionId);
+
+    if (!transaction) {
+        return { success: false, message: "Transaction not found" };
+    }
+
+    if (transaction.isPaid) {
+        return { success: true, message: "Transaction already paid" };
+    }
+
+    const paidTransaction = await Transaction.findOneAndUpdate(
+        { _id: transactionId, isPaid: false },
+        { $set: { isPaid: true } },
+        { new: true }
+    );
+
+    if (!paidTransaction) {
+        return { success: true, message: "Transaction already paid" };
+    }
+
+    const user = await User.findByIdAndUpdate(
+        paidTransaction.userId,
+        { $inc: { credits: paidTransaction.credits } },
+        { new: true }
+    );
+
+    if (!user) {
+        paidTransaction.isPaid = false;
+        await paidTransaction.save();
+        return { success: false, message: "User not found" };
+    }
+
+    return { success: true, credits: user.credits };
+};
+
 export const purchasePlan = async(req, res) =>{
     try{
         const {planId} = req.body
@@ -49,7 +88,6 @@ export const purchasePlan = async(req, res) =>{
                 message:"invalid plan"
             })
         }
-//   Create new Transaction
         const transaction = await  Transaction.create({
             userId:userId,
             planId:plan._id,
@@ -57,6 +95,13 @@ export const purchasePlan = async(req, res) =>{
             credits:plan.credits,
             isPaid:false
         })
+
+      console.info('[Stripe checkout] Transaction created:', {
+        transactionId: transaction._id,
+        userId: transaction.userId,
+        credits: transaction.credits,
+        isPaid: transaction.isPaid
+      })
 
       const origin = req.headers.origin
       const session = await stripe.checkout.sessions.create({       
@@ -69,18 +114,49 @@ export const purchasePlan = async(req, res) =>{
                         name:plan.name
                     }
                 },
-                quantity: 2,
+                quantity: 1,
             },
         ],
         mode:'payment',
-        success_url : `${origin}/loading`,
+        success_url : `${origin}/loading?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}`,
         metadata: {transactionId:transaction._id.toString(),appId:'quickgpt'},
        expires_at: Math.floor(Date.now()/1000) + 30*60,
       });      
+
+      console.info('[Stripe checkout] Session created:', {
+        sessionId: session.id,
+        metadata: session.metadata
+      })
 
       res.json({success: true , url:session.url})
     }catch(error){
         res.json({success:false, message:error.message})
     }
 }
+
+export const verifyPurchase = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+
+        if (!sessionId) {
+            return res.json({ success: false, message: "Missing checkout session" });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.metadata?.appId !== "quickgpt") {
+            return res.json({ success: false, message: "Invalid checkout session" });
+        }
+
+        if (session.payment_status !== "paid") {
+            return res.json({ success: false, message: "Payment is not completed yet" });
+        }
+
+        const result = await applyPaidTransactionCredits(session.metadata.transactionId);
+
+        res.json(result);
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};

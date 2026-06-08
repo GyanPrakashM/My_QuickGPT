@@ -1,6 +1,5 @@
  
 
-// API controller for creating a new chat
 import Chat from "../models/Chat.js"
 
 export const createChat = async (req , res) =>{
@@ -20,7 +19,6 @@ export const createChat = async (req , res) =>{
     }
 }
 
-// Api controller to getting all chat 
 export const getChats = async (req , res) =>{
     try{
         const userId = req.user._id
@@ -33,7 +31,6 @@ export const getChats = async (req , res) =>{
     }
 }
 
-// Api controller fro deleting a chat
 export const deleteChat = async (req , res) =>{
     try{
         const userId = req.user._id
