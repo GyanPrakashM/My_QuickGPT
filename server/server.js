@@ -16,7 +16,11 @@ await connectDB()
 
 app.post('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhooks)
 
-app.use(cors());
+app.use(cors({
+  origin: "https://my-quick-gpt-zeta.vercel.app",
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.get('/', (req , res)=>{
