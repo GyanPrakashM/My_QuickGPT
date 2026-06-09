@@ -18,7 +18,7 @@ app.post('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhook
 
 app.use(cors({
   origin: "*",
-  credentials: true
+  credentials: false
 }));
 
 app.use(express.json());
